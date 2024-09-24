@@ -1,36 +1,46 @@
 import json
-import logging
+import os
 
-from src.utils import greetings, read_excel
-from src.views import currency_rates, filter_by_date, get_price_stock
+import pandas as pd
+from dotenv import load_dotenv
 
-logger = logging.getLogger("utils.log")
-file_handler = logging.FileHandler("main.log", "w")
-file_formatter = logging.Formatter("%(asctime)s %(levelname)s: %(message)s")
-file_handler.setFormatter(file_formatter)
-logger.addHandler(file_handler)
-logger.setLevel(logging.INFO)
+from reports import spending_by_category
+from services import simple_search
+from utils import read_excel
+from views import main
 
-data_frame = read_excel("../data/operations.xlsx")
+with open("C:/Users/stasf/PycharmProjects/coursework/user_settings.json", "r") as file:
+    user_choice = json.load(file)
+load_dotenv()
+api_key_currency = os.getenv("API_KEY_VALUTE")
+api_key_stocks = os.getenv("API_KEY_500")
 
 
-def main(date: str, df_transactions, stocks: list, currency: list):
-    """Функция создающая JSON ответ для страницы главная"""
-    logger.info("Начало работы главной функции (main)")
-    final_list = filter_by_date(date, df_transactions)
-    greeting = greetings()
-    stocks_prices = get_price_stock(stocks)
-    currency_r = currency_rates(currency)
-    logger.info("Создание JSON ответа")
-    result = [{
-            "greeting": greeting,
-            "currency_rates": currency_r,
-            "stock_prices": stocks_prices,
-        }]
-    date_json = json.dumps(
-        result,
-        indent=4,
-        ensure_ascii=False,
-    )
-    logger.info("Завершение работы главной функции (main)")
-    return date_json
+def main_menu():
+    user_date = input("Введите дату:")
+    if user_date == "":
+        print([])
+    else:
+        main_page = main(user_date, user_choice, api_key_currency, api_key_stocks)
+        print(main_page)
+
+    path = r"C:/Users/stasf/PycharmProjects/coursework/data/operations.xlsx"
+    my_list = read_excel(path)
+    user_string = input("Введите строку поиска:")
+    if user_string == "":
+        print(my_list)
+    else:
+        searching = simple_search(my_list, user_string)
+        print(searching)
+
+    df = pd.read_excel(r"C:/Users/stasf/PycharmProjects/coursework/data/operations.xlsx")
+    user_category = input("Введите категорию поиска:")
+    if user_category == "":
+        print([])
+    else:
+        spending_cat = spending_by_category(df, user_category, user_date)
+        print(spending_cat)
+
+
+if __name__ == "__main__":
+    main_menu()
