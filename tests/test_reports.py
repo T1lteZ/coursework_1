@@ -1,23 +1,37 @@
 import pytest
-from path_to_file import PATH_TO_FILE
-from src.utils import read_excel
+import pandas as pd
 from src.reports import spending_by_category
-
-result_read = read_excel(PATH_TO_FILE)
-result_spend = spending_by_category(result_read, "Переводы", date="31.12.2021")
 
 
 @pytest.fixture
-def fix_reports():
-    return result_spend
+def sample_data():
+    data = {
+        "Дата операции": [
+            "01.12.2021 12:00:00",
+            "15.12.2021 10:30:00",
+            "25.12.2021 18:45:00",
+            "05.01.2022 08:00:00",
+            "20.02.2022 16:20:00",
+        ],
+        "Категория": ["Продукты", "Продукты", "Транспорт", "Продукты", "Транспорт"],
+        "Сумма": [100, 200, 50, 150, 80],
+    }
+    df = pd.DataFrame(data)
+    return df
 
 
-def test_report(fix_reports):
-    assert spending_by_category(result_read, "Переводы", date="31.12.2021") == fix_reports
-    assert result_spend[0] == fix_reports[0]
+def test_spending_by_category_no_date(sample_data):
+    result = spending_by_category(sample_data, "Продукты")
+    assert len(result) == 0
 
 
-def test_reports():
-    assert spending_by_category(result_read, "Переводы") == []
-    assert spending_by_category(result_read, "Красота") == []
-    assert spending_by_category(result_read, "sdfsf") == []
+def test_spending_by_category_future_date(sample_data):
+    result = spending_by_category(sample_data, "Продукты", "01.01.2023 00:00:00")
+    assert (
+        len(result) == 0
+    )
+
+
+def test_spending_by_category_no_transactions(sample_data):
+    result = spending_by_category(sample_data, "Здоровье", "30.12.2021 17:50:30")
+    assert len(result) == 0

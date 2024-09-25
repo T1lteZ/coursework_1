@@ -46,4 +46,4 @@ exclude = '''
 
 
 [tool.isort]
-line-lenght = 119
+line_length = 119
