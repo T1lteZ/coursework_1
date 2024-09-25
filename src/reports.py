@@ -1,5 +1,7 @@
-import functools
+import csv
+from functools import wraps
 import logging
+import json
 from datetime import datetime, timedelta
 from typing import Any, Callable, Optional
 
@@ -13,21 +15,22 @@ logger.addHandler(file_handler)
 logger.setLevel(logging.INFO)
 
 
-def report_to_file_default(func: Callable) -> Callable:
-    """Записывает в файл результат, который возвращает функция, формирующая отчет."""
+def log_spending_by_category(filename: Any) -> Callable:
+    """Логирует результат функции в указанный файл"""
+    def decorator(func: Callable) -> Callable:
+        @wraps(func)
+        def wrapper(*args: Any, **kwargs: Any) -> Any:
+            result = func(*args, **kwargs)
+            with open(filename, "w", encoding="utf-8") as f:
+                json.dump(result, f, indent=4)
+            return result
 
-    @functools.wraps(func)
-    def wrapper(*args: Any, **kwargs: Any) -> Any:
-        result = func(*args, **kwargs)
-        with open("report.json", "w") as file:
-            file.write(str(result))
-        logger.info(f"Записан результат работы функции {func}")
-        return result
+        return wrapper
 
-    return wrapper
+    return decorator
 
 
-@report_to_file_default
+@log_spending_by_category("data/report_output.json")
 def spending_by_category(transactions: pd.DataFrame, category: str, date: Optional[str] = None) -> pd.DataFrame:
     """Функция возвращающая траты за последние 3 месяца по заданной категории"""
     try:
@@ -44,7 +47,9 @@ def spending_by_category(transactions: pd.DataFrame, category: str, date: Option
         ]
         grouped_transactions = filtered_transactions.groupby(pd.Grouper(key="Дата операции", freq="ME")).sum()
         logger.info(f"Траты за последние три месяца от {date} по категории {category}")
-        return grouped_transactions.to_dict(orient="records")
+        results = grouped_transactions.to_json(orient="records")
+        json_obj = json.loads(results)
+        return json_obj
     except Exception as e:
         print(f"Возникла ошибка {e}")
         logger.error(f"Возникла ошибка {e}")

@@ -21,6 +21,19 @@ API_KEY_VALUTE = os.getenv("API_KEY_VALUTE")
 API_KEY_500 = os.getenv("API_KEY_500")
 
 
+def reader_transaction_excel(file_path) -> pd.DataFrame:
+    """Функция принимает на вход путь до файла и возвращает датафрейм"""
+    logger.info(f"Вызвана функция получения транзакций из файла {file_path}")
+    try:
+        df_transactions = pd.read_excel(file_path)
+        logger.info(f"Файл {file_path} найден, данные о транзакциях получены")
+
+        return df_transactions
+    except FileNotFoundError:
+        logger.info(f"Файл {file_path} не найден")
+        raise
+
+
 def read_excel(path: str) -> list[dict]:
     """Функция принимает путь до xlsx файла и создает список словарей с транзакциями"""
     try:
@@ -33,7 +46,7 @@ def read_excel(path: str) -> list[dict]:
         return []
 
 
-def filter_by_date(transactions: list[dict], input_date_str: str) -> list[dict]:
+def filter_by_date(df_transactions: pd.DataFrame, input_date_str: str) -> pd.DataFrame:
     """Функция принимает список словарей с транзакциями и дату
     фильтрует транзакции с начала месяца, на который выпадает входящая дата по входящую дату."""
     input_date = datetime.strptime(input_date_str, "%d.%m.%Y")
@@ -44,13 +57,11 @@ def filter_by_date(transactions: list[dict], input_date_str: str) -> list[dict]:
         """Функция переводит дату из формата строки в формат datetime"""
         return datetime.strptime(date_str, "%d.%m.%Y %H:%M:%S")
 
-    filtered_transactions = [
-        transaction
-        for transaction in transactions
-        if start_date <= parse_date(transaction["Дата операции"]) <= end_date
-    ]
+    filtered_transaction = df_transactions.loc[(pd.to_datetime(df_transactions["Дата операции"], dayfirst=True) <= end_date)
+        & (pd.to_datetime(df_transactions["Дата операции"], dayfirst=True) >= start_date)]
+
     logger.info(f"Транзакции в списке отфильтрованы по датам от {start_date} до {end_date}")
-    return filtered_transactions
+    return filtered_transaction
 
 
 def greetings():
@@ -66,58 +77,49 @@ def greetings():
         return "Доброй ночи"
 
 
-def get_cards_data(transactions: list[dict]) -> list[dict]:
+def get_cards_data(df_transactions: pd.DataFrame) -> pd.DataFrame:
     """Функция создает словарь с ключоми номеров карт и в значения добавляет сумму трат и сумму кэшбека"""
-    card_data = {}
-    for transaction in transactions:
-        card_number = transaction.get("Номер карты")
-        if not card_number or str(card_number).strip().lower() == "nan":
-            continue
-        amount = float(transaction["Сумма операции"])
-        if card_number not in card_data:
-            card_data[card_number] = {"total_spent": 0.0, "cashback": 0.0}
-        if amount < 0:
-            card_data[card_number]["total_spent"] += abs(amount)
-            cashback_value = transaction.get("Кэшбэк")
-            if transaction["Категория"] != "Переводы" and transaction["Категория"] != "Наличные":
-                if cashback_value is not None:
-                    cashback_amount = float(cashback_value)
-                    if cashback_amount >= 0:
-                        card_data[card_number]["cashback"] += cashback_amount
-                    else:
-                        card_data[card_number]["cashback"] += amount * -0.01
-                else:
-                    card_data[card_number]["cashback"] += amount * -0.01
-    logger.info("кэшбек и суммы по картам посчитаны")
-    cards_data = []
-    for last_digits, data in card_data.items():
-        cards_data.append(
-            {
-                "last_digits": last_digits,
-                "total_spent": round(data["total_spent"], 2),
-                "cashback": round(data["cashback"], 2),
-            }
+    cards_dict = (
+        df_transactions.loc[df_transactions["Сумма платежа"] < 0]
+        .groupby(by="Номер карты")
+        .agg("Сумма платежа")
+        .sum()
+        .to_dict()
+    )
+    logger.debug(f"Получен словарь расходов по картам: {cards_dict}")
+    expenses_cards = []
+    for card, expenses in cards_dict.items():
+        expenses_cards.append(
+            {"last_digits": card, "total spent": abs(expenses), "cashback": abs(round(expenses / 100, 2))}
         )
-    logger.info("получен словарь по тратам и кешбеку по каждой карте")
-    return cards_data
+        logger.info(f"Добавлен расход по карте {card}: {abs(expenses)}")
+
+    logger.info("Завершение выполнения функции get_expenses_cards")
+    return expenses_cards
 
 
-def get_top_5_transactions(transactions: list[dict]) -> list[dict]:
-    """Функция принимает список транзакций и выводит топ 5 операций по сумме платежа"""
-    sorted_transactions = sorted(transactions, key=lambda x: abs(float(x["Сумма операции"])), reverse=True)
-    top_5_sorted_transactions = []
-    for transaction in sorted_transactions[:5]:
-        date = datetime.strptime(transaction["Дата операции"], "%d.%m.%Y %H:%M:%S").strftime("%d.%m.%Y")
-        top_5_sorted_transactions.append(
+def get_top_5_transactions(df_transactions):
+    """Функция вывода топ 5 транзакций по сумме платежа"""
+    logger.info("Начало работы функции top_transaction")
+    top_transaction = df_transactions.sort_values(by="Сумма платежа", ascending=True).iloc[:5]
+    logger.info("Получен топ 5 транзакций по сумме платежа")
+    result_top_transaction = top_transaction.to_dict(orient="records")
+    top_transaction_list = []
+    for transaction in result_top_transaction:
+        top_transaction_list.append(
             {
-                "date": date,
-                "amount": transaction["Сумма операции"],
+                "date": str(
+                    (datetime.strptime(transaction["Дата операции"], "%d.%m.%Y %H:%M:%S"))
+                    .date()
+                    .strftime("%d.%m.%Y")
+                ).replace("-", "."),
+                "amount": transaction["Сумма платежа"],
                 "category": transaction["Категория"],
                 "description": transaction["Описание"],
             }
         )
-    logger.info("Выделено топ 5 больших транзакций")
-    return top_5_sorted_transactions
+    logger.info("Сформирован список топ 5 транзакций")
+    return top_transaction_list
 
 
 def currency_rates(currency: list, api_key) -> list[dict]:

@@ -1,6 +1,7 @@
 import json
 import os
-
+import sys
+sys.path.append(os.getcwd())
 import pandas as pd
 from dotenv import load_dotenv
 

@@ -3,6 +3,7 @@ import logging
 import os
 from typing import Any
 
+import pandas as pd
 from dotenv import load_dotenv
 
 from src.utils import (
@@ -33,8 +34,8 @@ api_key_stocks = os.getenv("API_KEY_500")
 def main(input_date: Any, user_settings: Any, api_key_currency: Any, api_key_stocks: Any) -> Any:
     """Основная функция для генерации JSON-ответа."""
     path = r"C:/Users/stasf/PycharmProjects/coursework/data/operations.xlsx"
-    transactions = read_excel(path)
-    filtered_transactions = filter_by_date(transactions, input_date)
+    trans_pd = pd.read_excel(path)
+    filtered_transactions = filter_by_date(trans_pd, input_date)
     cards_data = get_cards_data(filtered_transactions)
     exchange_rates = currency_rates(user_settings["user_currencies"], api_key_currency)
     stocks_cost = get_price_stock(user_settings["user_stocks"], api_key_stocks)
