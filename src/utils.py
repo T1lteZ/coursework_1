@@ -51,14 +51,16 @@ def filter_by_date(df_transactions: pd.DataFrame, input_date_str: str) -> pd.Dat
     фильтрует транзакции с начала месяца, на который выпадает входящая дата по входящую дату."""
     input_date = datetime.strptime(input_date_str, "%d.%m.%Y")
     end_date = input_date + timedelta(days=1)
-    start_date = datetime(end_date.year, end_date.month, 1)
+    start_date = datetime(input_date.year, input_date.month, 1)
 
     def parse_date(date_str: str) -> datetime:
         """Функция переводит дату из формата строки в формат datetime"""
         return datetime.strptime(date_str, "%d.%m.%Y %H:%M:%S")
 
-    filtered_transaction = df_transactions.loc[(pd.to_datetime(df_transactions["Дата операции"], dayfirst=True) <= end_date)
-        & (pd.to_datetime(df_transactions["Дата операции"], dayfirst=True) >= start_date)]
+    filtered_transaction = df_transactions.loc[
+        (pd.to_datetime(df_transactions["Дата операции"], dayfirst=True) <= end_date)
+        & (pd.to_datetime(df_transactions["Дата операции"], dayfirst=True) >= start_date)
+    ]
 
     logger.info(f"Транзакции в списке отфильтрованы по датам от {start_date} до {end_date}")
     return filtered_transaction
@@ -101,25 +103,31 @@ def get_cards_data(df_transactions: pd.DataFrame) -> pd.DataFrame:
 def get_top_5_transactions(df_transactions):
     """Функция вывода топ 5 транзакций по сумме платежа"""
     logger.info("Начало работы функции top_transaction")
-    top_transaction = df_transactions.sort_values(by="Сумма платежа", ascending=True).iloc[:5]
-    logger.info("Получен топ 5 транзакций по сумме платежа")
-    result_top_transaction = top_transaction.to_dict(orient="records")
-    top_transaction_list = []
-    for transaction in result_top_transaction:
-        top_transaction_list.append(
-            {
-                "date": str(
-                    (datetime.strptime(transaction["Дата операции"], "%d.%m.%Y %H:%M:%S"))
-                    .date()
-                    .strftime("%d.%m.%Y")
-                ).replace("-", "."),
-                "amount": transaction["Сумма платежа"],
-                "category": transaction["Категория"],
-                "description": transaction["Описание"],
-            }
-        )
-    logger.info("Сформирован список топ 5 транзакций")
-    return top_transaction_list
+    try:
+        if df_transactions is []:
+            return []
+        else:
+            top_transaction = df_transactions.sort_values(by="Сумма платежа", ascending=True).iloc[:5]
+            logger.info("Получен топ 5 транзакций по сумме платежа")
+            result_top_transaction = top_transaction.to_dict(orient="records")
+            top_transaction_list = []
+            for transaction in result_top_transaction:
+                top_transaction_list.append(
+                    {
+                        "date": str(
+                            (datetime.strptime(transaction["Дата операции"], "%d.%m.%Y %H:%M:%S"))
+                            .date()
+                            .strftime("%d.%m.%Y")
+                        ).replace("-", "."),
+                        "amount": transaction["Сумма платежа"],
+                        "category": transaction["Категория"],
+                        "description": transaction["Описание"],
+                    }
+                )
+            logger.info("Сформирован список топ 5 транзакций")
+        return top_transaction_list
+    except AttributeError:
+        return []
 
 
 def currency_rates(currency: list, api_key) -> list[dict]:

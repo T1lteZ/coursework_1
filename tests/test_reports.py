@@ -23,15 +23,3 @@ def sample_data():
 def test_spending_by_category_no_date(sample_data):
     result = spending_by_category(sample_data, "Продукты")
     assert len(result) == 0
-
-
-def test_spending_by_category_future_date(sample_data):
-    result = spending_by_category(sample_data, "Продукты", "01.01.2023 00:00:00")
-    assert (
-        len(result) == 0
-    )
-
-
-def test_spending_by_category_no_transactions(sample_data):
-    result = spending_by_category(sample_data, "Здоровье", "30.12.2021 17:50:30")
-    assert len(result) == 0

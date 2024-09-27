@@ -6,6 +6,7 @@ from typing import Any
 import pandas as pd
 from dotenv import load_dotenv
 
+from path_to_file import PATH_TO_FILE, PATH_TO_FILE_USER
 from src.utils import (
     currency_rates,
     filter_by_date,
@@ -13,7 +14,6 @@ from src.utils import (
     get_price_stock,
     get_top_5_transactions,
     greetings,
-    read_excel,
 )
 
 logger = logging.getLogger("views.log")
@@ -24,7 +24,7 @@ logger.addHandler(file_handler)
 logger.setLevel(logging.INFO)
 
 
-with open("C:/Users/stasf/PycharmProjects/coursework/user_settings.json", "r") as file:
+with open(PATH_TO_FILE_USER, "r") as file:
     user_choice = json.load(file)
 load_dotenv()
 api_key_currency = os.getenv("API_KEY_VALUTE")
@@ -33,7 +33,7 @@ api_key_stocks = os.getenv("API_KEY_500")
 
 def main(input_date: Any, user_settings: Any, api_key_currency: Any, api_key_stocks: Any) -> Any:
     """Основная функция для генерации JSON-ответа."""
-    path = r"C:/Users/stasf/PycharmProjects/coursework/data/operations.xlsx"
+    path = PATH_TO_FILE
     trans_pd = pd.read_excel(path)
     filtered_transactions = filter_by_date(trans_pd, input_date)
     cards_data = get_cards_data(filtered_transactions)

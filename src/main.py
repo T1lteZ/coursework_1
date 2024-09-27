@@ -1,16 +1,16 @@
 import json
 import os
-import sys
-sys.path.append(os.getcwd())
+
 import pandas as pd
 from dotenv import load_dotenv
 
+from path_to_file import PATH_TO_FILE, PATH_TO_FILE_USER
 from reports import spending_by_category
 from services import simple_search
 from utils import read_excel
 from views import main
 
-with open("C:/Users/stasf/PycharmProjects/coursework/user_settings.json", "r") as file:
+with open(PATH_TO_FILE_USER, "r") as file:
     user_choice = json.load(file)
 load_dotenv()
 api_key_currency = os.getenv("API_KEY_VALUTE")
@@ -25,7 +25,7 @@ def main_menu():
         main_page = main(user_date, user_choice, api_key_currency, api_key_stocks)
         print(main_page)
 
-    path = r"C:/Users/stasf/PycharmProjects/coursework/data/operations.xlsx"
+    path = PATH_TO_FILE
     my_list = read_excel(path)
     user_string = input("Введите строку поиска:")
     if user_string == "":
@@ -34,7 +34,7 @@ def main_menu():
         searching = simple_search(my_list, user_string)
         print(searching)
 
-    df = pd.read_excel(r"C:/Users/stasf/PycharmProjects/coursework/data/operations.xlsx")
+    df = pd.read_excel(PATH_TO_FILE)
     user_category = input("Введите категорию поиска:")
     if user_category == "":
         print([])

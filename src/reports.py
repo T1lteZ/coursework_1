@@ -1,8 +1,6 @@
-import csv
-from functools import wraps
 import logging
-import json
 from datetime import datetime, timedelta
+from functools import wraps
 from typing import Any, Callable, Optional
 
 import pandas as pd
@@ -15,14 +13,14 @@ logger.addHandler(file_handler)
 logger.setLevel(logging.INFO)
 
 
-def log_spending_by_category(filename: Any) -> Callable:
+def log_spending_by_category(filename: str = "data/report_output.json") -> Callable:
     """Логирует результат функции в указанный файл"""
+
     def decorator(func: Callable) -> Callable:
         @wraps(func)
         def wrapper(*args: Any, **kwargs: Any) -> Any:
             result = func(*args, **kwargs)
-            with open(filename, "w", encoding="utf-8") as f:
-                json.dump(result, f, indent=4)
+            result.to_json(path_or_buf=filename, orient="records", force_ascii=False, indent=4)
             return result
 
         return wrapper
@@ -45,11 +43,8 @@ def spending_by_category(transactions: pd.DataFrame, category: str, date: Option
             & (transactions["Дата операции"] <= date)
             & (transactions["Категория"] == category)
         ]
-        grouped_transactions = filtered_transactions.groupby(pd.Grouper(key="Дата операции", freq="ME")).sum()
         logger.info(f"Траты за последние три месяца от {date} по категории {category}")
-        results = grouped_transactions.to_json(orient="records")
-        json_obj = json.loads(results)
-        return json_obj
+        return filtered_transactions
     except Exception as e:
         print(f"Возникла ошибка {e}")
         logger.error(f"Возникла ошибка {e}")
